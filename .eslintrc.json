@@ -1,0 +1,27 @@
+{
+  "extends": [
+    "next/core-web-vitals",
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:import/errors",
+    "plugin:import/typescript",
+    "prettier",
+    "plugin:storybook/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint", "import", "unused-imports"],
+  "parserOptions": {
+    "sourceType": "module",
+    "ecmaVersion": "latest"
+  },
+  "rules": {
+    "eqeqeq": "error",
+    "handle-callback-err": "warn",
+    "eol-last": ["error", "always"],
+    "sort-imports": 0,
+    "import/order": [2, { "alphabetize": { "order": "asc" } }],
+    "@typescript-eslint/no-unused-vars": "off",
+    "unused-imports/no-unused-imports-ts": "warn"
+  }
+}
