@@ -2,43 +2,74 @@ import * as util from "util";
 import * as fs from "fs";
 import * as path from "path";
 import { runHTML } from "./sigen";
+import { stdYN } from "@/interactive";
 
 // TODO: promise
-// TODO: stdout
-// TODO: catch error
 // TODO: copy not html files
 // TODO: not copy used html files
-export const startSigen = () => {
+export const startSigen = async () => {
   const args = util.parseArgs({
     options: {
       recursive: { type: "boolean", short: "r" },
     },
     allowPositionals: true,
   });
-
   if (args.values.recursive === undefined) args.values.recursive = false;
 
-  const files = getTargetFiles(args.positionals, args.values.recursive);
-
-  if (files === undefined) {
+  const ioFiles = getTargetFiles(args.positionals, args.values.recursive);
+  if (ioFiles === undefined) {
+    console.log("Error");
     return;
   }
 
-  if (files.in.length === 1) {
-    fs.writeFileSync(files.out, runHTML(files.in[0]));
+  if (ioFiles.in.length === 1) {
+    // input one file, output one file
+    saveSigenHTML(ioFiles.in[0], ioFiles.out, true);
   } else {
-    const filePaths = files.in.map((p) => ({
+    // input multiple files, output to directory
+
+    // 出力パスを出力ディレクトリからの相対パスにする
+    const filePaths = ioFiles.in.map((p) => ({
       in: p,
       out: p
         .split("/")
         .filter((v, i) => i !== 0)
         .join("/"),
     }));
+
     filePaths.forEach((p) => {
-      const outPath = path.join(files.out, p.out);
+      const outPath = path.join(ioFiles.out, p.out);
       fs.mkdirSync(path.dirname(outPath), { recursive: true });
-      fs.writeFileSync(outPath, runHTML(p.in));
+      saveSigenHTML(p.in, outPath);
     });
+  }
+};
+
+const saveSigenHTML = async (
+  inPath: string,
+  outPath: string,
+  doCheckOverwrite = false
+) => {
+  const writeHTML = () => {
+    fs.writeFileSync(outPath, runHTML(inPath));
+  };
+
+  if (fs.existsSync(inPath)) {
+    // 新規ファイル
+    writeHTML();
+  } else {
+    if (fs.statSync(outPath).isDirectory()) {
+      // ディレクトリならError
+      console.log(`${outPath} is not a file.`);
+    } else if (doCheckOverwrite) {
+      // 上書き確認
+      console.log(`${inPath} is exists.`);
+      if (await stdYN("Do you want to overwrite?")) {
+        writeHTML();
+      }
+    } else {
+      writeHTML();
+    }
   }
 };
 
@@ -48,14 +79,27 @@ const getTargetFiles = (
 ): { in: string[]; out: string } | undefined => {
   if (paths.length < 2) return;
 
+  // 一番最後の要素が出力パス
   const outPaths = paths[paths.length - 1];
+
   if (isR) {
+    const inFiles: string[] = [];
     const inPaths = paths
       .filter((p, i) => {
         if (i === paths.length - 1) return false;
-        return fs.statSync(p).isDirectory();
+        if (!fs.existsSync(p)) {
+          console.log(`${fs.existsSync(p)} is not exists.`);
+          return false;
+        }
+        if (fs.statSync(p).isDirectory()) {
+          return true;
+        } else {
+          inFiles.push(p);
+          return false;
+        }
       })
       .flatMap((p) => getFilesRecursive(p));
+    inPaths.concat(inFiles);
 
     return { in: inPaths, out: outPaths };
   } else {
