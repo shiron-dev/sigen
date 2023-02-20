@@ -1,6 +1,6 @@
-import { SigenCommand } from "./command";
 import * as fs from "fs";
 import * as path from "path";
+import { SigenCommand } from "./command";
 
 interface IncludeCommand extends SigenCommand {
   path: string;

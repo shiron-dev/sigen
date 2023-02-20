@@ -10,7 +10,7 @@ export const findSigenCommands = (
   str: string,
   path: string
 ): SigenCommandPos[] => {
-  const p = /\<\!\-\- +sigen\:/g;
+  const p = /<!-- +sigen:/g;
   const ret: SigenCommandPos[] = [];
   let begin: number | undefined;
   while ((begin = p.exec(str)?.index) !== undefined) {

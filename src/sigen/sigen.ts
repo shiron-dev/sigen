@@ -1,6 +1,6 @@
 import * as fs from "fs";
-import { findSigenCommands } from "./parser";
 import { runCommand } from "./commands/command";
+import { findSigenCommands } from "./parser";
 
 export const runHTML = async (path: string): Promise<string> => {
   const html = (await fs.promises.readFile(path)).toString();
