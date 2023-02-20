@@ -1,6 +1,8 @@
-const path = require("path");
+import * as webpack from "webpack";
+import * as path from "path";
+import { TsconfigPathsPlugin } from "tsconfig-paths-webpack-plugin";
 
-module.exports = {
+const config: webpack.Configuration = {
   mode: "production",
   target: ["node"],
   entry: "./src/index.ts",
@@ -19,5 +21,8 @@ module.exports = {
   resolve: {
     modules: ["node_modules"],
     extensions: [".ts", ".js"],
+    plugins: [new TsconfigPathsPlugin({ configFile: "./tsconfig.json" })],
   },
 };
+
+export default config;

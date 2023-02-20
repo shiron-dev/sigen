@@ -14,6 +14,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["**/*.ts", "tsconfig.json", "webpack.config.js"],
+  "include": ["**/*.ts", "tsconfig.json", "webpack.config.ts"],
   "exclude": ["node_modules"]
 }
