@@ -10,10 +10,14 @@ const toIncludeCommand = (command: SigenCommand): IncludeCommand => {
   return { ...command, path: command.tokens[2] };
 };
 
-export const runIncludeCommand = (command: SigenCommand): string => {
+export const runIncludeCommand = async (
+  command: SigenCommand
+): Promise<string> => {
   const cmd = toIncludeCommand(command);
-  const includeHtml = fs
-    .readFileSync(path.join(path.dirname(cmd.runtimePath), cmd.path))
-    .toString();
+  const includeHtml = (
+    await fs.promises.readFile(
+      path.join(path.dirname(cmd.runtimePath), cmd.path)
+    )
+  ).toString();
   return includeHtml;
 };

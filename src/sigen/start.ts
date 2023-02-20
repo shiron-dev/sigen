@@ -4,7 +4,6 @@ import * as path from "path";
 import { runHTML } from "./sigen";
 import { stdYN } from "@/interactive";
 
-// TODO: promise
 // TODO: copy not html files
 // TODO: not copy used html files
 export const startSigen = async () => {
@@ -16,7 +15,7 @@ export const startSigen = async () => {
   });
   if (args.values.recursive === undefined) args.values.recursive = false;
 
-  const ioFiles = getTargetFiles(args.positionals, args.values.recursive);
+  const ioFiles = await getTargetFiles(args.positionals, args.values.recursive);
   if (ioFiles === undefined) {
     console.log("Error");
     return;
@@ -37,11 +36,13 @@ export const startSigen = async () => {
         .join("/"),
     }));
 
-    filePaths.forEach((p) => {
-      const outPath = path.join(ioFiles.out, p.out);
-      fs.mkdirSync(path.dirname(outPath), { recursive: true });
-      saveSigenHTML(p.in, outPath);
-    });
+    await Promise.all(
+      filePaths.map(async (p) => {
+        const outPath = path.join(ioFiles.out, p.out);
+        await fs.promises.mkdir(path.dirname(outPath), { recursive: true });
+        saveSigenHTML(p.in, outPath);
+      })
+    );
   }
 };
 
@@ -50,15 +51,15 @@ const saveSigenHTML = async (
   outPath: string,
   doCheckOverwrite = false
 ) => {
-  const writeHTML = () => {
-    fs.writeFileSync(outPath, runHTML(inPath));
+  const writeHTML = async () => {
+    await fs.promises.writeFile(outPath, await runHTML(inPath));
   };
 
-  if (fs.existsSync(inPath)) {
+  if (await exists(inPath)) {
     // 新規ファイル
     writeHTML();
   } else {
-    if (fs.statSync(outPath).isDirectory()) {
+    if ((await fs.promises.stat(outPath)).isDirectory()) {
       // ディレクトリならError
       console.log(`${outPath} is not a file.`);
     } else if (doCheckOverwrite) {
@@ -73,10 +74,10 @@ const saveSigenHTML = async (
   }
 };
 
-const getTargetFiles = (
+const getTargetFiles = async (
   paths: string[],
   isR: boolean
-): { in: string[]; out: string } | undefined => {
+): Promise<{ in: string[]; out: string } | undefined> => {
   if (paths.length < 2) return;
 
   // 一番最後の要素が出力パス
@@ -84,45 +85,66 @@ const getTargetFiles = (
 
   if (isR) {
     const inFiles: string[] = [];
-    const inPaths = paths
-      .filter((p, i) => {
+    const filtered = await Promise.all(
+      paths.map(async (p, i) => {
         if (i === paths.length - 1) return false;
-        if (!fs.existsSync(p)) {
-          console.log(`${fs.existsSync(p)} is not exists.`);
+        if (!(await exists(p))) {
+          console.log(`${p} is not exists.`);
           return false;
         }
-        if (fs.statSync(p).isDirectory()) {
+        if ((await fs.promises.stat(p)).isDirectory()) {
           return true;
         } else {
           inFiles.push(p);
           return false;
         }
       })
-      .flatMap((p) => getFilesRecursive(p));
+    );
+    const inPaths = (
+      await Promise.all(
+        paths.filter((f, i) => filtered[i]).map((p) => getFilesRecursive(p))
+      )
+    ).flat();
     inPaths.concat(inFiles);
 
     return { in: inPaths, out: outPaths };
   } else {
-    const inPaths = paths.filter((p, i) => {
-      if (i === paths.length - 1) return false;
-      if (fs.existsSync(p)) {
-        return true;
-      } else {
-        console.log(`${p} is not exists.`);
-        return false;
-      }
-    });
+    const filtered = await Promise.all(
+      paths.map(async (p, i) => {
+        if (i === paths.length - 1) return false;
+        if (await exists(p)) {
+          return true;
+        } else {
+          console.log(`${p} is not exists.`);
+          return false;
+        }
+      })
+    );
+    const inPaths = paths.filter((p, i) => filtered[i]);
 
     return { in: inPaths, out: outPaths };
   }
 };
 
-const getFilesRecursive = (dir: string): string[] => {
-  return fs
-    .readdirSync(dir, { withFileTypes: true })
-    .flatMap((f) =>
-      f.isDirectory()
-        ? getFilesRecursive(path.join(dir, f.name))
-        : path.join(dir, f.name)
-    );
+const getFilesRecursive = async (dir: string): Promise<string[]> => {
+  return (
+    await Promise.all(
+      (
+        await fs.promises.readdir(dir, { withFileTypes: true })
+      ).map(async (f) =>
+        f.isDirectory()
+          ? getFilesRecursive(path.join(dir, f.name))
+          : path.join(dir, f.name)
+      )
+    )
+  ).flat();
+};
+
+const exists = async (str: string) => {
+  try {
+    await fs.promises.stat(str);
+    return true;
+  } catch (e) {
+    return false;
+  }
 };

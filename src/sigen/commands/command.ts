@@ -7,10 +7,10 @@ export interface SigenCommand {
   runtimePath: string;
 }
 
-export const runCommand = (cmd: SigenCommand): string => {
+export const runCommand = async (cmd: SigenCommand): Promise<string> => {
   switch (cmd.type) {
     case "include":
-      return runIncludeCommand(cmd);
+      return await runIncludeCommand(cmd);
     default:
       return "";
   }
