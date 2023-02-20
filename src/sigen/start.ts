@@ -4,16 +4,19 @@ import * as path from "path";
 import { runHTML } from "./sigen";
 import { stdYN } from "@/interactive";
 
-// TODO: copy not html files
+const sigenExt = [".html"];
+
 // TODO: not copy used html files
 export const startSigen = async () => {
   const args = util.parseArgs({
     options: {
       recursive: { type: "boolean", short: "r" },
+      all: { type: "boolean", short: "a" },
     },
     allowPositionals: true,
   });
   if (args.values.recursive === undefined) args.values.recursive = false;
+  if (args.values.all === undefined) args.values.all = false;
 
   const ioFiles = await getTargetFiles(args.positionals, args.values.recursive);
   if (ioFiles === undefined) {
@@ -39,8 +42,12 @@ export const startSigen = async () => {
     await Promise.all(
       filePaths.map(async (p) => {
         const outPath = path.join(ioFiles.out, p.out);
-        await fs.promises.mkdir(path.dirname(outPath), { recursive: true });
-        saveSigenHTML(p.in, outPath);
+        if (sigenExt.includes(path.extname(p.in))) {
+          await fs.promises.mkdir(path.dirname(outPath), { recursive: true });
+          saveSigenHTML(p.in, outPath);
+        } else if (args.values.all) {
+          await fs.promises.copyFile(p.in, outPath);
+        }
       })
     );
   }
