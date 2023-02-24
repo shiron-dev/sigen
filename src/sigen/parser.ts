@@ -33,6 +33,8 @@ const toSigenCommand = (
     switch (tokens[1]) {
       case "include":
         return "include";
+      case "remove":
+        return "remove";
       default:
         return "none";
     }

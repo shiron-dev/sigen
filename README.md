@@ -31,3 +31,12 @@ Sigen is a static site generator that puts together common sections, etc., and u
   sigen -r -a ./page/ ./out/
   ```
 
+  Add elements only during development.
+
+  Adding an element for during development allows you to remove that element after the Sigen run.
+  ```index.html
+  <!-- sigen: remove from -->
+  <div>Development in progress only</div>
+  <!-- sigen: remove to -->
+  ```
+

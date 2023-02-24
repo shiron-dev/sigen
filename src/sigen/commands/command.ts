@@ -1,6 +1,7 @@
 import { runIncludeCommand } from "./includeCmd";
+import { runRemoveCommand } from "./removeCmd";
 
-export type SigenCommandType = "include" | "none";
+export type SigenCommandType = "include" | "remove" | "none";
 export interface SigenCommand {
   type: SigenCommandType;
   tokens: string[];
@@ -25,6 +26,8 @@ export const runCommand = async (
   switch (cmd.type) {
     case "include":
       return await runIncludeCommand(cmd, source);
+    case "remove":
+      return await runRemoveCommand(cmd, source);
     default:
       return { source: source, diff: 0 };
   }
