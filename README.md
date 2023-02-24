@@ -40,3 +40,5 @@ Sigen is a static site generator that puts together common sections, etc., and u
   <!-- sigen: remove to -->
   ```
 
+# License
+The source code is licensed MIT.
