@@ -6,6 +6,11 @@ import { stdYN } from "@/interactive";
 
 const sigenExt = [".html"];
 
+interface FileMap {
+  in: string;
+  out: string;
+}
+
 // TODO: not copy used html files
 export const startSigen = async () => {
   const args = util.parseArgs({
@@ -18,39 +23,43 @@ export const startSigen = async () => {
   if (args.values.recursive === undefined) args.values.recursive = false;
   if (args.values.all === undefined) args.values.all = false;
 
-  const ioFiles = await getTargetFiles(args.positionals, args.values.recursive);
-  if (ioFiles === undefined) {
+  if (args.positionals.length < 2) {
     console.log("Error");
     return;
   }
 
-  if (ioFiles.in.length === 1) {
-    // input one file, output one file
-    saveSigenHTML(ioFiles.in[0], ioFiles.out, true);
-  } else {
-    // input multiple files, output to directory
+  const ioPaths: FileMap[] = (() => {
+    if (!args.values.recursive) {
+      const outDir = path.join(
+        __dirname,
+        args.positionals[args.positionals.length - 1]
+      );
+      return args.positionals
+        .filter((v, i) => i !== args.positionals.length - 1)
+        .map((v) => ({
+          in: path.join(__dirname, v),
+          out: path.join(outDir, path.basename(v)),
+        }));
+    } else {
+      return getIOPaths(
+        args.positionals.filter((v, i) => i !== args.positionals.length - 1),
+        args.positionals[args.positionals.length - 1]
+      );
+    }
+  })();
 
-    // 出力パスを出力ディレクトリからの相対パスにする
-    const filePaths = ioFiles.in.map((p) => ({
-      in: p,
-      out: p
-        .split("/")
-        .filter((v, i) => i !== 0)
-        .join("/"),
-    }));
+  await Promise.all(
+    ioPaths.map(async (ioPath) => {
+      await fs.promises.mkdir(path.dirname(ioPath.out), { recursive: true });
 
-    await Promise.all(
-      filePaths.map(async (p) => {
-        const outPath = path.join(ioFiles.out, p.out);
-        if (sigenExt.includes(path.extname(p.in))) {
-          await fs.promises.mkdir(path.dirname(outPath), { recursive: true });
-          saveSigenHTML(p.in, outPath);
-        } else if (args.values.all) {
-          await fs.promises.copyFile(p.in, outPath);
-        }
-      })
-    );
-  }
+      if (sigenExt.includes(path.extname(ioPath.in))) {
+        await saveSigenHTML(ioPath.in, ioPath.out);
+      } else {
+        console.log(ioPath.in, ioPath.out);
+        await fs.promises.copyFile(ioPath.in, ioPath.out);
+      }
+    })
+  );
 };
 
 const saveSigenHTML = async (
@@ -81,70 +90,26 @@ const saveSigenHTML = async (
   }
 };
 
-const getTargetFiles = async (
-  paths: string[],
-  isR: boolean
-): Promise<{ in: string[]; out: string } | undefined> => {
-  if (paths.length < 2) return;
+const getIOPaths = (inputDirs: string[], outputDir: string): FileMap[] => {
+  const result: FileMap[] = [];
 
-  // 一番最後の要素が出力パス
-  const outPaths = paths[paths.length - 1];
+  const traverseDir = (dir: string, rootDir: string) => {
+    fs.readdirSync(dir).forEach((file: string) => {
+      const filePath = path.join(dir, file);
+      if (fs.statSync(filePath).isDirectory()) {
+        traverseDir(filePath, rootDir);
+      } else {
+        const relativePath = path.relative(rootDir, filePath);
+        result.push({
+          in: filePath,
+          out: path.join(outputDir, relativePath),
+        });
+      }
+    });
+  };
 
-  if (isR) {
-    const inFiles: string[] = [];
-    const filtered = await Promise.all(
-      paths.map(async (p, i) => {
-        if (i === paths.length - 1) return false;
-        if (!(await exists(p))) {
-          console.log(`${p} is not exists.`);
-          return false;
-        }
-        if ((await fs.promises.stat(p)).isDirectory()) {
-          return true;
-        } else {
-          inFiles.push(p);
-          return false;
-        }
-      })
-    );
-    const inPaths = (
-      await Promise.all(
-        paths.filter((f, i) => filtered[i]).map((p) => getFilesRecursive(p))
-      )
-    ).flat();
-    inPaths.concat(inFiles);
-
-    return { in: inPaths, out: outPaths };
-  } else {
-    const filtered = await Promise.all(
-      paths.map(async (p, i) => {
-        if (i === paths.length - 1) return false;
-        if (await exists(p)) {
-          return true;
-        } else {
-          console.log(`${p} is not exists.`);
-          return false;
-        }
-      })
-    );
-    const inPaths = paths.filter((p, i) => filtered[i]);
-
-    return { in: inPaths, out: outPaths };
-  }
-};
-
-const getFilesRecursive = async (dir: string): Promise<string[]> => {
-  return (
-    await Promise.all(
-      (
-        await fs.promises.readdir(dir, { withFileTypes: true })
-      ).map(async (f) =>
-        f.isDirectory()
-          ? getFilesRecursive(path.join(dir, f.name))
-          : path.join(dir, f.name)
-      )
-    )
-  ).flat();
+  inputDirs.forEach((dir) => traverseDir(dir, dir));
+  return result;
 };
 
 const exists = async (str: string) => {
