@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { SigenCommand } from "./command";
+import { CommandResult, SigenCommand } from "./command";
 
 interface IncludeCommand extends SigenCommand {
   path: string;
@@ -11,13 +11,20 @@ const toIncludeCommand = (command: SigenCommand): IncludeCommand => {
 };
 
 export const runIncludeCommand = async (
-  command: SigenCommand
-): Promise<string> => {
+  command: SigenCommand,
+  source: string
+): Promise<CommandResult> => {
   const cmd = toIncludeCommand(command);
   const includeHtml = (
     await fs.promises.readFile(
       path.join(path.dirname(cmd.runtimePath), cmd.path)
     )
   ).toString();
-  return includeHtml;
+  return {
+    source:
+      source.substring(0, command.pos.begin) +
+      includeHtml +
+      source.substring(command.pos.end),
+    diff: includeHtml.length - command.commandStr.length,
+  };
 };

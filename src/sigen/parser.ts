@@ -1,30 +1,33 @@
-import { SigenCommand, SigenCommandType } from "./commands/command";
-
-export interface SigenCommandPos {
-  begin: number;
-  end: number;
-  command: SigenCommand;
-}
+import {
+  CommandPosition,
+  SigenCommand,
+  SigenCommandType,
+} from "./commands/command";
 
 export const findSigenCommands = (
   str: string,
   path: string
-): SigenCommandPos[] => {
+): SigenCommand[] => {
   const p = /<!-- +sigen:/g;
-  const ret: SigenCommandPos[] = [];
+  const ret: SigenCommand[] = [];
   let begin: number | undefined;
   while ((begin = p.exec(str)?.index) !== undefined) {
     const end = str.indexOf("-->", begin) + 3;
-    ret.push({
-      begin: begin,
-      end: end,
-      command: toSigenCommand(str.substring(begin, end), path),
-    });
+    ret.push(
+      toSigenCommand(str.substring(begin, end), path, {
+        begin: begin,
+        end: end,
+      })
+    );
   }
   return ret;
 };
 
-const toSigenCommand = (str: string, path: string): SigenCommand => {
+const toSigenCommand = (
+  str: string,
+  path: string,
+  pos: CommandPosition
+): SigenCommand => {
   const tokens = str.split(" ").slice(1, -1);
   const getType = (): SigenCommandType => {
     switch (tokens[1]) {
@@ -34,5 +37,11 @@ const toSigenCommand = (str: string, path: string): SigenCommand => {
         return "none";
     }
   };
-  return { type: getType(), tokens: tokens, runtimePath: path };
+  return {
+    type: getType(),
+    commandStr: str,
+    tokens: tokens,
+    runtimePath: path,
+    pos: pos,
+  };
 };
