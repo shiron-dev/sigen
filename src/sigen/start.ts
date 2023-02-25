@@ -93,11 +93,13 @@ const saveSigenHTML = async (
 const getIOPaths = (inputDirs: string[], outputDir: string): FileMap[] => {
   const result: FileMap[] = [];
 
-  const traverseDir = (dir: string, rootDir: string) => {
+  function traverseDir(dir: string, rootDir: string) {
     fs.readdirSync(dir).forEach((file: string) => {
       const filePath = path.join(dir, file);
       if (fs.statSync(filePath).isDirectory()) {
-        traverseDir(filePath, rootDir);
+        if (!file.startsWith(".")) {
+          traverseDir(filePath, rootDir);
+        }
       } else {
         const relativePath = path.relative(rootDir, filePath);
         result.push({
@@ -106,7 +108,7 @@ const getIOPaths = (inputDirs: string[], outputDir: string): FileMap[] => {
         });
       }
     });
-  };
+  }
 
   inputDirs.forEach((dir) => traverseDir(dir, dir));
   return result;
