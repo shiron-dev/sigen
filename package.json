@@ -1,6 +1,6 @@
 {
   "name": "sigen",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Sigen is a static site generator that puts together common sections, etc., and uses templates to quickly, easily, and instantly output static HTML.",
   "main": "index.js",
   "scripts": {
