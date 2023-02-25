@@ -28,7 +28,7 @@ export const runRemoveCommand = async (
     const ret = {
       source:
         source.substring(0, removeBegin) + source.substring(command.pos.end),
-      diff: command.pos.end - removeBegin,
+      diff: removeBegin - command.pos.end,
     };
     removeBegin = -1;
     return ret;
