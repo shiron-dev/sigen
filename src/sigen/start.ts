@@ -55,7 +55,6 @@ export const startSigen = async () => {
       if (sigenExt.includes(path.extname(ioPath.in))) {
         await saveSigenHTML(ioPath.in, ioPath.out);
       } else {
-        console.log(ioPath.in, ioPath.out);
         await fs.promises.copyFile(ioPath.in, ioPath.out);
       }
     })
